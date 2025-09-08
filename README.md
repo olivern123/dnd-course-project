@@ -6,5 +6,5 @@
 |---------------------|----------------|-------------------|
 | Oliver Nedergaard      | 331466       | olivern123   |
 | Salma Badeh            | 331787       | SalmaBadeh   |
-| Jasmin Nazemi          | 331291       |              | 
-| Fatima Alnabhan        | 330964       |              |
+| Jasmin Nazemi          | 331291       | Fatushal     | 
+| Fatima Alnabhan        | 330964       | JasminNazemi |
