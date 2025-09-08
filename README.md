@@ -5,6 +5,6 @@
 | Name                | Student Number | GitHub Username   |
 |---------------------|----------------|-------------------|
 | Oliver Nedergaard      | 331466       | olivern123   |
-| Salma Badeh            | 331787       |              |
+| Salma Badeh            | 331787       | SalmaBadeh   |
 | Jasmin Nazemi          | 331291       |              | 
 | Fatima Alnabhan        | 330964       |              |
