@@ -6,4 +6,8 @@ Companies focus on ESG data due to EU regulations and market expectations from i
 
 Companies often struggle with how to collect, structure, and present ESG data in a way that is both transparent and useful for decision-making. Today much of this work is made manually in spreadsheets or systems that does not pair together, making it hard to compare data across time or giving any meaningful insights that directly support strategic decisions.
 
+
 ## Why We Chose This Domain
+We chose ESG reporting as our domain for three main reasons:
+
+1. ESG reporting is no longer optional or just some keyword companies use to appear more green but has become a legal requirement for companies in Denmark and EU. While it can sound like a turn-off for some companies, it actually serves as a tool that can help guide companies. Supporting insight in many key aspects of the company's value chain and can help guide strategic decision making
