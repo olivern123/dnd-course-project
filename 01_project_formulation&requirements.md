@@ -1,4 +1,4 @@
-# Developer Blog Post #1 - Project Formulation & Initial Requirements
+# Blog Post 1 - Project Formulation & Requirements
 
 ## Project Domain
 Our project will focus on Environmental, Social and Governance (ESG) data management and reporting.
