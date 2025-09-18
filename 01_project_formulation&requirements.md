@@ -18,3 +18,7 @@ To address this challenge, we aim to design and implement a .NET based ESG repor
 We chose ESG reporting as our domain for three main reasons:
 
 1. ESG reporting is no longer optional or just some keyword companies use to appear more green but has become a legal requirement for companies in Denmark and EU. While it can sound like a turn-off for some companies, it actually serves as a tool that can help guide companies. Supporting insight in many key aspects of the company's value chain and can help guide strategic decision making
+2. ESG performance is tied to investor's confidence, customer trust and positioning. Companies that can track and improve ESG metrics are positioned better to attract investment, keep customers and reduce operational risks.
+3. The domain provides a technical challenge. By combining a Restful .NET backend, Blazor web application, a SQLite database with Entity framework, and integration with PowerBI we will deliver a full-stack that demonstrates technical and business relevance.
+
+## Requirements
