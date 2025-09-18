@@ -22,3 +22,12 @@ We chose ESG reporting as our domain for three main reasons:
 3. The domain provides a technical challenge. By combining a Restful .NET backend, Blazor web application, a SQLite database with Entity framework, and integration with PowerBI we will deliver a full-stack that demonstrates technical and business relevance.
 
 ## Requirements
+- As an admin, I want to log in with a username and password, so that I can securely upload and manage ESG data.
+- As a admin, I want to upload ESG data files, so that the company’s sustainability data is recorded in the system
+- As an admin, I want to update or delete incorrect data
+- As an admin, I want to create, and delete users, so that I can control who has access to the system.
+- As a user, I want to log in with a username and password, so that I can securely access the ESG data and reports.
+- As a user, I want to view ESG results in a Power BI dashboard, so that I can identify trends and support decision-making.
+- As a user, I want to filter results, so that I can focus on the data needed.
+- As a user, I want to see uploaded data in clear tables or charts
+  
