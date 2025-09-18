@@ -6,6 +6,11 @@ Companies focus on ESG data due to EU regulations and market expectations from i
 
 Companies often struggle with how to collect, structure, and present ESG data in a way that is both transparent and useful for decision-making. Today much of this work is made manually in spreadsheets or systems that does not pair together, making it hard to compare data across time or giving any meaningful insights that directly support strategic decisions.
 
+To address this challenge, we aim to design and implement a .NET based ESG reporting system. The system will allow companies to:
+- Ingest ESG data such as energy consumption, CO2 emissions or waste.
+- Calculate relevant KPIs such as emissions (Scope 1-3) or packaging
+- Store data in a structed database
+- 
 
 ## Why We Chose This Domain
 We chose ESG reporting as our domain for three main reasons:
