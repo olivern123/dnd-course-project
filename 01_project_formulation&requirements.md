@@ -8,9 +8,11 @@ Companies often struggle with how to collect, structure, and present ESG data in
 
 To address this challenge, we aim to design and implement a .NET based ESG reporting system. The system will allow companies to:
 - Ingest ESG data such as energy consumption, CO2 emissions or waste.
-- Calculate relevant KPIs such as emissions (Scope 1-3) or packaging
-- Store data in a structed database
-- 
+- Calculate relevant KPIs such as emissions (Scope 1-3).
+- Store data in a structed database.
+- Provide role-based access for different users, ensuring data contributors, managers and executives can all interact with the system according to their role
+- Visualize in Power BI for managers/decision-makers
+  
 
 ## Why We Chose This Domain
 We chose ESG reporting as our domain for three main reasons:
