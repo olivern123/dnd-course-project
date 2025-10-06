@@ -1,0 +1,57 @@
+@page "/add-waste"
+@inject WasteService WasteService
+
+<h3>Add Waste Entry</h3>
+
+<EditForm Model="@entry" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="mb-3">
+        <label>Material:</label>
+        <InputText class="form-control" @bind-Value="entry.Material" />
+    </div>
+
+    <div class="mb-3">
+        <label>Color:</label>
+        <InputText class="form-control" @bind-Value="entry.Color" />
+    </div>
+
+    <div class="mb-3">
+        <label>Weight (kg):</label>
+        <InputNumber class="form-control" @bind-Value="entry.WeightKg" />
+    </div>
+
+    <div class="mb-3">
+        <label>Source:</label>
+        <InputText class="form-control" @bind-Value="entry.Source" />
+    </div>
+
+    <div class="mb-3">
+        <label>Timestamp:</label>
+        <InputDate class="form-control" @bind-Value="entry.Timestamp" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Submit</button>
+</EditForm>
+
+@if (successMessage is not null)
+{
+    <div class="alert alert-success mt-3">@successMessage</div>
+}
+
+@code {
+    private WasteEntry entry = new()
+    {
+        Timestamp = DateTime.Now
+    };
+
+    private string? successMessage;
+
+    private async Task HandleValidSubmit()
+    {
+        await WasteService.AddAsync(entry);
+        successMessage = "Waste entry added!";
+        entry = new WasteEntry { Timestamp = DateTime.Now }; // reset form
+    }
+}

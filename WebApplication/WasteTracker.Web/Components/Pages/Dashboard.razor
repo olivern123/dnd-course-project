@@ -1,0 +1,44 @@
+@page "/dashboard"
+@inject WasteService WasteService
+
+<h3>Waste Overview</h3>
+
+@if (entries == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Material</th>
+                <th>Color</th>
+                <th>Weight (kg)</th>
+                <th>Source</th>
+                <th>Timestamp</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var entry in entries)
+            {
+                <tr>
+                    <td>@entry.Material</td>
+                    <td>@entry.Color</td>
+                    <td>@entry.WeightKg</td>
+                    <td>@entry.Source</td>
+                    <td>@entry.Timestamp.ToString("g")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<WasteEntry>? entries;
+
+    protected override async Task OnInitializedAsync()
+    {
+        entries = await WasteService.GetAllAsync();
+    }
+}
