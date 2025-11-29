@@ -1,23 +1,28 @@
-using System.Net.Http.Json;
 using WasteTracker.Web.Models;
+using System.Net.Http.Json;
 
-public class WasteService
+namespace WasteTracker.Web.Services
 {
-    private readonly HttpClient _http;
-    private const string ApiBase = "http://localhost:5104/api/waste";
-
-    public WasteService(HttpClient http)
+    public class WasteService
     {
-        _http = http;
-    }
+        private readonly HttpClient _http;
 
-    public async Task<List<WasteEntry>> GetAllAsync()
-    {
-        return await _http.GetFromJsonAsync<List<WasteEntry>>(ApiBase) ?? new();
-    }
+        public WasteService(HttpClient http)
+        {
+            _http = http;
+        }
 
-    public async Task AddAsync(WasteEntry entry)
-    {
-        await _http.PostAsJsonAsync(ApiBase, entry);
+        // Because BaseAddress = http://localhost:5104/api/
+        // we must call "wasteentries" (NOT "api/wasteentries")
+        public async Task<List<WasteEntry>> GetAllAsync()
+        {
+            return await _http.GetFromJsonAsync<List<WasteEntry>>("wasteentries")
+                   ?? new List<WasteEntry>();
+        }
+
+        public async Task AddAsync(WasteEntry entry)
+        {
+            await _http.PostAsJsonAsync("wasteentries", entry);
+        }
     }
 }

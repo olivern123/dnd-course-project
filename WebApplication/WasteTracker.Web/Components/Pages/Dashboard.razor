@@ -1,4 +1,6 @@
 @page "/dashboard"
+@using WasteTracker.Web.Models
+@using WasteTracker.Web.Services
 @inject WasteService WasteService
 
 <h3>Waste Overview</h3>
@@ -7,27 +9,31 @@
 {
     <p><em>Loading...</em></p>
 }
+else if (!entries.Any())
+{
+    <p>No waste entries found.</p>
+}
 else
 {
-    <table class="table">
+    <table class="table table-striped">
         <thead>
             <tr>
-                <th>Material</th>
-                <th>Color</th>
-                <th>Weight (kg)</th>
-                <th>Source</th>
-                <th>Timestamp</th>
+                <th>Site</th>
+                <th>Waste Type</th>
+                <th>Handling Method</th>
+                <th>Quantity (kg)</th>
+                <th>Date</th>
             </tr>
         </thead>
         <tbody>
             @foreach (var entry in entries)
             {
                 <tr>
-                    <td>@entry.Material</td>
-                    <td>@entry.Color</td>
-                    <td>@entry.WeightKg</td>
-                    <td>@entry.Source</td>
-                    <td>@entry.Timestamp.ToString("g")</td>
+                    <td>@entry.Site?.Name</td>
+                    <td>@entry.WasteType?.Name</td>
+                    <td>@entry.HandlingMethod?.Method</td>
+                    <td>@entry.QuantityKg</td>
+                    <td>@entry.Date.ToShortDateString()</td>
                 </tr>
             }
         </tbody>
@@ -39,6 +45,14 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        entries = await WasteService.GetAllAsync();
+        try
+        {
+            entries = await WasteService.GetAllAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error loading waste entries: {ex.Message}");
+            entries = new List<WasteEntry>();
+        }
     }
 }

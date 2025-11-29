@@ -11,9 +11,16 @@ public class AppDbContext : DbContext
     public DbSet<WasteType> WasteTypes => Set<WasteType>();
     public DbSet<HandlingMethod> HandlingMethods => Set<HandlingMethod>();
     public DbSet<WasteEntry> WasteEntries => Set<WasteEntry>();
+    public DbSet<User> Users => Set<User>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+            modelBuilder.Entity<Site>().HasKey(s => s.SiteId);
+            modelBuilder.Entity<WasteType>().HasKey(w => w.WasteTypeId);
+            modelBuilder.Entity<HandlingMethod>().HasKey(h => h.HandlingId);
+            modelBuilder.Entity<WasteEntry>().HasKey(e => e.EntryId);
+            modelBuilder.Entity<User>().HasKey(u => u.Id);
+
         // Sites
         modelBuilder.Entity<Site>().HasData(
             new Site { SiteId = 1, Name = "Convert", Location = "Denmark" },
@@ -38,6 +45,12 @@ public class AppDbContext : DbContext
             new WasteEntry { EntryId = 1, SiteId = 1, WasteTypeId = 1, HandlingId = 1, QuantityKg = 200, Date = DateTime.Parse("2025-01-10") },
             new WasteEntry { EntryId = 2, SiteId = 1, WasteTypeId = 2, HandlingId = 2, QuantityKg = 150, Date = DateTime.Parse("2025-01-15") },
             new WasteEntry { EntryId = 3, SiteId = 2, WasteTypeId = 3, HandlingId = 1, QuantityKg = 300, Date = DateTime.Parse("2025-02-01") }
+        );
+
+        // Users Login
+        modelBuilder.Entity<User>().HasData(
+            new User { Id = 1, Username = "admin", Password = "admin123", Role = "Admin" },
+            new User { Id = 2, Username = "user", Password = "user123", Role = "User" }
         );
     }
 }

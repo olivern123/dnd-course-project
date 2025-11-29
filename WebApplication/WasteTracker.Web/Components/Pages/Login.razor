@@ -1,0 +1,58 @@
+@page "/login"
+@inject HttpClient Http
+@using WasteTracker.Web.Models
+
+<h3>Login</h3>
+
+<EditForm Model="loginModel" OnValidSubmit="HandleLogin" FormName="loginForm">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="mb-3">
+        <label>Username:</label>
+        <InputText class="form-control" @bind-Value="loginModel.Username" />
+    </div>
+
+    <div class="mb-3">
+        <label>Password:</label>
+        <InputText class="form-control" type="password" @bind-Value="loginModel.Password" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Login</button>
+</EditForm>
+
+
+@if (!string.IsNullOrWhiteSpace(error))
+{
+    <div class="alert alert-danger mt-2">@error</div>
+}
+
+@code {
+     [SupplyParameterFromForm]
+     
+    private UserDto loginModel { get; set; } = new UserDto();
+    private string? error;
+
+    private async Task HandleLogin()
+    {
+        try
+        {
+            var response = await Http.PostAsJsonAsync("users/login", loginModel);
+            if (response.IsSuccessStatusCode)
+            {
+                var user = await response.Content.ReadFromJsonAsync<User>();
+                error = null;
+                Console.WriteLine($"Login successful. Welcome, {user!.Username}!");
+                // TODO: Store user session or navigate
+            }
+            else
+            {
+                error = "Invalid username or password.";
+            }
+        }
+        catch (Exception ex)
+        {
+            error = $"Login failed: {ex.Message}";
+        }
+    }
+}

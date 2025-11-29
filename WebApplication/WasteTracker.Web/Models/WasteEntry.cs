@@ -1,12 +1,38 @@
 namespace WasteTracker.Web.Models
 {
-    public class WasteEntry
-    {
-        public Guid Id { get; set; }
-        public string Material { get; set; } = string.Empty;
-        public string Color { get; set; } = string.Empty;
-        public double WeightKg { get; set; }
-        public string Source { get; set; } = string.Empty;
-        public DateTime Timestamp { get; set; }
-    }
+public class WasteEntry
+{
+    public int EntryId { get; set; }
+    public int SiteId { get; set; }
+    public Site? Site { get; set; }
+    public int WasteTypeId { get; set; }
+    public WasteType? WasteType { get; set; }
+    public int HandlingId { get; set; }
+    public HandlingMethod? HandlingMethod { get; set; }
+    public decimal QuantityKg { get; set; }
+    public DateTime Date { get; set; }
+}
+
+public class Site
+{
+    public int SiteId { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Location { get; set; } = string.Empty;
+}
+
+public class WasteType
+{
+    public int WasteTypeId { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Category { get; set; } = string.Empty;
+}
+
+public class HandlingMethod
+{
+    public int HandlingId { get; set; }
+    public string Method { get; set; } = string.Empty;
+    public decimal CostPerTon { get; set; }
+    public decimal CO2FactorPerTon { get; set; }
+}
+
 }

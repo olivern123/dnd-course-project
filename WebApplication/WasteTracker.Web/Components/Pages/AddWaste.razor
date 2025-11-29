@@ -1,57 +1,184 @@
-@page "/add-waste"
-@inject WasteService WasteService
+@page "/add-wasteentry"
+@rendermode InteractiveServer
+@using WasteTracker.Web.Models
+@using Microsoft.AspNetCore.Components.Forms
+@using ClosedXML.Excel
+@inject HttpClient Http
 
-<h3>Add Waste Entry</h3>
+<h3>Import Waste from Excel (Opgørelse PO xxxx.xlsx)</h3>
 
-<EditForm Model="@entry" OnValidSubmit="HandleValidSubmit">
-    <DataAnnotationsValidator />
-    <ValidationSummary />
+<p>
+    Select one or more <strong>Opgørelse PO xxxx.xlsx</strong> files.<br />
+    The system extracts <strong>Spild ialt</strong> from sheet <strong>Data Input</strong>
+    and creates a <code>WasteEntry</code> entry for each file.
+</p>
 
-    <div class="mb-3">
-        <label>Material:</label>
-        <InputText class="form-control" @bind-Value="entry.Material" />
+<hr />
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="mb-3">
+            <label class="form-label">Default Site ID</label>
+            <InputNumber class="form-control" @bind-Value="defaultSiteId" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Default Waste Type ID</label>
+            <InputNumber class="form-control" @bind-Value="defaultWasteTypeId" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Default Handling Method ID</label>
+            <InputNumber class="form-control" @bind-Value="defaultHandlingId" />
+        </div>
     </div>
 
-    <div class="mb-3">
-        <label>Color:</label>
-        <InputText class="form-control" @bind-Value="entry.Color" />
+    <div class="col-md-8">
+        <div class="mb-3">
+            <label class="form-label">Excel Files (Opgørelse)</label>
+            <InputFile OnChange="HandleFilesSelected" multiple class="form-control" />
+        </div>
+
+        <button class="btn btn-primary"
+                @onclick="UploadAndImport"
+                disabled="@(selectedFiles.Count == 0)">
+            Import to WasteEntries
+        </button>
     </div>
+</div>
 
-    <div class="mb-3">
-        <label>Weight (kg):</label>
-        <InputNumber class="form-control" @bind-Value="entry.WeightKg" />
-    </div>
-
-    <div class="mb-3">
-        <label>Source:</label>
-        <InputText class="form-control" @bind-Value="entry.Source" />
-    </div>
-
-    <div class="mb-3">
-        <label>Timestamp:</label>
-        <InputDate class="form-control" @bind-Value="entry.Timestamp" />
-    </div>
-
-    <button type="submit" class="btn btn-primary">Submit</button>
-</EditForm>
-
-@if (successMessage is not null)
+@if (!string.IsNullOrWhiteSpace(success))
 {
-    <div class="alert alert-success mt-3">@successMessage</div>
+    <div class="alert alert-success mt-3">@success</div>
+}
+@if (!string.IsNullOrWhiteSpace(error))
+{
+    <div class="alert alert-danger mt-3">@error</div>
+}
+
+@if (importLog.Count > 0)
+{
+    <h5 class="mt-4">Import Log</h5>
+    <ul>
+        @foreach (var line in importLog)
+        {
+            <li>@line</li>
+        }
+    </ul>
 }
 
 @code {
-    private WasteEntry entry = new()
-    {
-        Timestamp = DateTime.Now
-    };
+    private List<IBrowserFile> selectedFiles = new();
+    private int defaultSiteId = 1;
+    private int defaultWasteTypeId = 1;
+    private int defaultHandlingId = 1;
 
-    private string? successMessage;
+    private string? success;
+    private string? error;
+    private List<string> importLog = new();
 
-    private async Task HandleValidSubmit()
+    private void HandleFilesSelected(InputFileChangeEventArgs e)
     {
-        await WasteService.AddAsync(entry);
-        successMessage = "Waste entry added!";
-        entry = new WasteEntry { Timestamp = DateTime.Now }; // reset form
+        selectedFiles = e.GetMultipleFiles().ToList();
+        success = error = null;
+        importLog.Clear();
+    }
+
+    private async Task UploadAndImport()
+    {
+        success = error = null;
+
+        if (selectedFiles.Count == 0)
+        {
+            error = "Please select one or more .xlsx files.";
+            return;
+        }
+
+        int imported = 0;
+        decimal totalWaste = 0;
+
+        foreach (var file in selectedFiles)
+        {
+            try
+            {
+                // Required for async Excel reading
+                using var ms = new MemoryStream();
+                await file.OpenReadStream(10_000_000).CopyToAsync(ms);
+                ms.Position = 0;
+
+                using var workbook = new ClosedXML.Excel.XLWorkbook(ms);
+
+                // Find sheet (Data Input or first sheet)
+                var ws = workbook.Worksheets.FirstOrDefault(w => w.Name == "Data Input")
+                         ?? workbook.Worksheet(1);
+
+                // Read date = row where column A contains "Dato"
+                DateTime date = DateTime.Today;
+                foreach (var row in ws.RowsUsed())
+                {
+                    var label = row.Cell(1).GetString();
+                    if (label.Contains("Dato", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var cell = row.Cell(2);
+                        if (cell.DataType == XLDataType.DateTime)
+                            date = cell.GetDateTime();
+                        else
+                            DateTime.TryParse(cell.GetString(), out date);
+                        break;
+                    }
+                }
+
+                // Read "Spild ialt" from column G/H
+                decimal waste = 0;
+                foreach (var row in ws.RowsUsed())
+                {
+                    var label = row.Cell(7).GetString();
+                    if (label.Contains("Spild ialt", StringComparison.OrdinalIgnoreCase))
+                    {
+                        waste = row.Cell(8).GetValue<decimal>();
+                        break;
+                    }
+                }
+
+                if (waste <= 0)
+                {
+                    importLog.Add($"{file.Name}: No Spild ialt found.");
+                    continue;
+                }
+
+                var entry = new WasteEntry
+                {
+                    SiteId = defaultSiteId,
+                    WasteTypeId = defaultWasteTypeId,
+                    HandlingId = defaultHandlingId,
+                    QuantityKg = waste,
+                    Date = date
+                };
+
+                // POST to wasteentries (BaseAddress handles /api/)
+                var resp = await Http.PostAsJsonAsync("wasteentries", entry);
+
+                if (resp.IsSuccessStatusCode)
+                {
+                    imported++;
+                    totalWaste += waste;
+                    importLog.Add($"{file.Name}: Imported {waste} kg (date {date:yyyy-MM-dd}).");
+                }
+                else
+                {
+                    var detail = await resp.Content.ReadAsStringAsync();
+                    importLog.Add($"{file.Name}: API error {detail}");
+                }
+            }
+            catch (Exception ex)
+            {
+                importLog.Add($"{file.Name}: ERROR {ex.Message}");
+            }
+        }
+
+        if (imported > 0)
+            success = $"Imported {imported} entries. Total waste: {totalWaste} kg.";
+        else
+            error = "No files imported. See log.";
     }
 }

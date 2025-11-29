@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("WasteManagement.API")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+aa75c99898f6daee53dcdaa20288d20f403e0922")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+5e61b6a4cacceda6a26088d685032e0450227d41")]
 [assembly: System.Reflection.AssemblyProductAttribute("WasteManagement.API")]
 [assembly: System.Reflection.AssemblyTitleAttribute("WasteManagement.API")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

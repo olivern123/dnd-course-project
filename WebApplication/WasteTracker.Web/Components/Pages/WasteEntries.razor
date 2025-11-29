@@ -1,0 +1,59 @@
+@page "/wasteentries"
+@inject HttpClient Http
+@using WasteTracker.Web.Models
+@using System.Net.Http.Json
+
+<h3>Waste Entries</h3>
+
+@if (entries is null)
+{
+    <p><em>Loading...</em></p>
+}
+else if (entries.Count == 0)
+{
+    <p><em>No entries found.</em></p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Site</th>
+                <th>Waste Type</th>
+                <th>Handling Method</th>
+                <th>Quantity (kg)</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var entry in entries)
+        {
+            <tr>
+                <td>@entry.Site?.Name</td>
+                <td>@entry.WasteType?.Name</td>
+                <td>@entry.HandlingMethod?.Method</td>
+                <td>@entry.QuantityKg</td>
+                <td>@entry.Date.ToShortDateString()</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<WasteEntry>? entries;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // API: GET http://localhost:5104/api/wasteentries
+            entries = await Http.GetFromJsonAsync<List<WasteEntry>>("api/wasteentries");
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error fetching data: {ex.Message}");
+            entries = new List<WasteEntry>();
+        }
+    }
+}
