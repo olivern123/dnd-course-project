@@ -47,3 +47,18 @@ GET /api/wasteentries – return all entries
 GET /api/wasteentries/{id} – return a single entry
 
 POST /api/wasteentries – insert a new entry
+
+The system also supports simple user login. We implemented a UsersController that verifies username and password using the database:
+[HttpPost("login")]
+public async Task<ActionResult<User>> Login(UserDto dto)
+{
+    var foundUser = await _context.Users
+        .FirstOrDefaultAsync(u => u.Username == dto.Username && u.Password == dto.Password);
+
+    if (foundUser == null)
+        return Unauthorized("Invalid credentials.");
+
+    return Ok(foundUser);
+}
+This allows the Blazor frontend to authenticate before accessing protected features.
+Overall, the Web API now provides a solid backbone for the system. It follows REST principles, exposes well-structured endpoints, integrates with SQLite through EF Core, and includes Swagger documentation.
