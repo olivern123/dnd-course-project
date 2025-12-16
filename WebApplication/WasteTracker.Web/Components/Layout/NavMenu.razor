@@ -1,6 +1,17 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+﻿@rendermode InteractiveServer
+
+@using WasteTracker.Web.Services
+@inject AuthService Auth
+
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="">WasteTracker.Web</a>
+        <div style="margin-left: auto; color: white; font-size: 0.9rem;">
+            @if (Auth?.CurrentUser != null)
+            {
+                <span>Hello <strong>@Auth.CurrentUser.Username</strong> (@Auth.CurrentUser.Role)</span>
+            }
+        </div>
     </div>
 </div>
 
@@ -15,45 +26,47 @@
             </NavLink>
         </div>
 
-        <!-- Counter (sample page) -->
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
-            </NavLink>
-        </div>
-
-        <!-- Weather (sample page) -->
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="weather">
-                <span class="bi bi-cloud-sun-nav-menu" aria-hidden="true"></span> Weather
-            </NavLink>
-        </div>
-
-        <!-- ✅ Dashboard Page -->
+        <!-- Dashboard Page -->
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="dashboard">
                 <span class="bi bi-table-nav-menu" aria-hidden="true"></span> Dashboard
             </NavLink>
         </div>
 
-        <!-- ✅ Add Waste Page -->
+        <!-- Add Waste Page -->
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="add-wasteentry">
                 <span class="bi bi-journal-plus-nav-menu" aria-hidden="true"></span> Add Waste
             </NavLink>
         </div>
 
+        <!-- Competitor KPIs -->
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="competitor">
+                <span class="bi bi-bar-chart-nav-menu" aria-hidden="true"></span> Competitor KPIs
+            </NavLink>
+        </div>
+
+        <!-- Login -->
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="login">
                 <span class="bi bi-box-arrow-in-right-nav-menu" aria-hidden="true"></span> Login
             </NavLink>
         </div>
-
-           <div class="nav-item px-3">
-            <NavLink class="nav-link" href="wasteentries">
-                <span class="bi bi-journal-plus-nav-menu" aria-hidden="true"></span> Waste Entries
-            </NavLink>
-        </div>
-
     </nav>
 </div>
+
+@code {
+    private bool renderTrigger = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Trigger a re-render after page components have initialized AuthService
+        if (firstRender)
+        {
+            await Task.Delay(100);
+            renderTrigger = !renderTrigger;
+            StateHasChanged();
+        }
+    }
+}

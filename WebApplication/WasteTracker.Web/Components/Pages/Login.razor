@@ -1,58 +1,110 @@
-@page "/login"
-@inject HttpClient Http
-@using WasteTracker.Web.Models
+    @page "/login"
+    @rendermode InteractiveServer
+    @inject HttpClient Http
+    @inject NavigationManager Nav
+    @inject AuthService Auth
+    @using WasteTracker.Web.Models
+    @using WasteTracker.Web.Services
+    @using System.Text.Json
 
-<h3>Login</h3>
+    <h3>Login</h3>
 
-<EditForm Model="loginModel" OnValidSubmit="HandleLogin" FormName="loginForm">
-    <DataAnnotationsValidator />
-    <ValidationSummary />
+    <EditForm Model="loginModel"
+            OnValidSubmit="HandleLogin"
+            OnInvalidSubmit="HandleInvalidSubmit"
+            FormName="loginForm">
 
-    <div class="mb-3">
-        <label>Username:</label>
-        <InputText class="form-control" @bind-Value="loginModel.Username" />
-    </div>
+        <DataAnnotationsValidator />
+        <ValidationSummary />
 
-    <div class="mb-3">
-        <label>Password:</label>
-        <InputText class="form-control" type="password" @bind-Value="loginModel.Password" />
-    </div>
+        <div class="mb-3">
+            <label>Username:</label>
+            <InputText class="form-control" @bind-Value="loginModel.Username" required autocomplete="username" />
+            <ValidationMessage For="() => loginModel.Username" />
+        </div>
 
-    <button type="submit" class="btn btn-primary">Login</button>
-</EditForm>
+        <div class="mb-3">
+            <label>Password:</label>
+            <InputText class="form-control" type="password" @bind-Value="loginModel.Password" required autocomplete="current-password" />
+            <ValidationMessage For="() => loginModel.Password" />
+        </div>
 
+        <button type="submit" class="btn btn-primary">Login</button>
+    </EditForm>
 
-@if (!string.IsNullOrWhiteSpace(error))
-{
-    <div class="alert alert-danger mt-2">@error</div>
-}
-
-@code {
-     [SupplyParameterFromForm]
-     
-    private UserDto loginModel { get; set; } = new UserDto();
-    private string? error;
-
-    private async Task HandleLogin()
+    @if (!string.IsNullOrEmpty(error))
     {
-        try
-        {
-            var response = await Http.PostAsJsonAsync("users/login", loginModel);
-            if (response.IsSuccessStatusCode)
-            {
-                var user = await response.Content.ReadFromJsonAsync<User>();
-                error = null;
-                Console.WriteLine($"Login successful. Welcome, {user!.Username}!");
-                // TODO: Store user session or navigate
-            }
-            else
-            {
-                error = "Invalid username or password.";
-            }
-        }
-        catch (Exception ex)
-        {
-            error = $"Login failed: {ex.Message}";
-        }
+        <div class="alert alert-danger mt-2">@error</div>
     }
-}
+
+    <!-- DEBUG UI removed -->
+
+    @code {
+        private UserDto loginModel { get; set; } = new UserDto();   // Correct binding source
+        private string? error;
+
+        private async Task HandleLogin()
+        {
+            try
+            {
+                Console.WriteLine($"[Login] HandleLogin called with username={loginModel.Username}");
+                
+                // Trim inputs to avoid accidental leading/trailing whitespace
+                loginModel.Username = (loginModel.Username ?? string.Empty).Trim();
+                loginModel.Password = (loginModel.Password ?? string.Empty).Trim();
+
+                // Basic client-side validation to avoid sending empty credentials
+                if (string.IsNullOrWhiteSpace(loginModel.Username) || string.IsNullOrWhiteSpace(loginModel.Password))
+                {
+                    error = "Please enter both username and password.";
+                    return;
+                }
+
+                Console.WriteLine($"[Login] Sending login request for {loginModel.Username}");
+                var response = await Http.PostAsJsonAsync("users/login", loginModel);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var serverText = await response.Content.ReadAsStringAsync();
+                    var reason = !string.IsNullOrWhiteSpace(serverText) ? serverText : response.ReasonPhrase;
+                    error = $"Login failed: {response.StatusCode} - {reason}";
+                    Console.WriteLine($"[Login] Login failed: {error}");
+                    return;
+                }
+
+                var user = await response.Content.ReadFromJsonAsync<User>();
+
+                if (user == null)
+                {
+                    error = "Login failed: Server returned no user.";
+                    Console.WriteLine($"[Login] No user returned from API");
+                    return;
+                }
+
+                Console.WriteLine($"[Login] User received: {user.Username}. Setting in AuthService...");
+                Auth.SetUser(user);
+                error = null;
+
+                Console.WriteLine($"[Login] Auth.IsLoggedIn = {Auth.IsLoggedIn}, CurrentUser = {Auth.CurrentUser?.Username}");
+                Console.WriteLine($"[Login] Navigating to /dashboard");
+                
+                await Task.Delay(100);
+                Nav.NavigateTo("/dashboard", false);
+                
+                Console.WriteLine($"[Login] Navigation called");
+            }
+            catch (Exception ex)
+            {
+                error = $"Login failed: {ex.Message}";
+                Console.WriteLine($"[Login] Exception: {ex}");
+            }
+        }
+
+        private void HandleInvalidSubmit(EditContext ec)
+        {
+            // Show a friendly message for invalid (empty) fields
+            error = "Please fill out both username and password.";
+        }
+
+        // OnUsernameInput/OnPasswordInput removed (debugging)
+    }

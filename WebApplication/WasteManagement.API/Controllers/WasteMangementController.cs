@@ -52,4 +52,25 @@ public class WasteEntriesController : ControllerBase
 
         return CreatedAtAction(nameof(GetWasteEntry), new { id = entry.EntryId }, entry);
     }
+
+    // DELETE: api/wasteentries/5
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteWasteEntry(int id)
+    {
+        var entry = await _context.WasteEntries.FindAsync(id);
+        if (entry == null)
+            return NotFound();
+
+        // If there are uploaded files linked to this entry, remove them first
+        var files = _context.UploadedFiles.Where(f => f.WasteEntryId == id);
+        if (files.Any())
+        {
+            _context.UploadedFiles.RemoveRange(files);
+        }
+
+        _context.WasteEntries.Remove(entry);
+        await _context.SaveChangesAsync();
+
+        return NoContent();
+    }
 }

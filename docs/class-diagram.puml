@@ -1,0 +1,218 @@
+@startuml
+' WasteTracker project class diagram
+left to right direction
+skinparam packageStyle rectangle
+skinparam defaultFontName Arial
+
+package "Blazor App (WasteTracker.Web)" {
+  package "Pages" {
+    class Dashboard {
+      -entries : List<WasteEntry>?
+      -allEntries : List<WasteEntry>?
+      -filterStartDate : DateTime?
+      -filterEndDate : DateTime?
+      +OnInitializedAsync()
+      +ApplyDateFilter()
+      +ClearDateFilter()
+      +DeleteEntry(id)
+      +ParseDateInput()
+    }
+
+    class AddWaste {
+      -selectedFilesInfos : List<SelectedFileInfo>
+      -defaultSiteId : int
+      -defaultWasteTypeId : int
+      -defaultHandlingId : int
+      +HandleFilesSelected()
+      +ParsePreviewAsync()
+      +TryParseCellValue()
+      +TryParseDateCell()
+      +FindLabelRightValue()
+      +UploadAndImport()
+    }
+
+    class Login {
+      -loginModel : UserDto
+      +HandleLogin()
+      +HandleInvalidSubmit()
+    }
+
+    class WasteEntries {
+      -entries : List<WasteEntry>?
+      +OnInitializedAsync()
+      +DeleteEntry(id)
+    }
+  }
+
+  package "Layout / Components" {
+    class NavMenu {
+      -renderTrigger : bool
+      +OnAfterRenderAsync()
+    }
+
+    class MainLayout {
+      +Logout()
+    }
+  }
+
+  package "Client Services" {
+    class AuthService {
+      -CurrentUser : User?
+      +SetUser(User)
+      +Logout()
+      +IsAdmin : bool
+      +IsLoggedIn : bool
+    }
+
+    class WasteService {
+      -_http : HttpClient
+      +Http : HttpClient
+      +GetAllAsync() : Task<List<WasteEntry>>
+      +AddAsync(entry) : Task
+      +DeleteAsync(id) : Task<bool>
+      +GetTotalWasteKg() : Task<decimal>
+      +GetKantspildKg() : Task<decimal>
+      +GetOtherWasteKg() : Task<decimal>
+      +GetInternalReuseKg() : Task<decimal>
+      +GetReuseStats() : Task<(decimal, decimal)>
+      +GetWasteByType() : Task<...>
+    }
+  }
+}
+
+package "HTTP / API Controllers (WasteManagement.API)" {
+  class WasteEntriesController {
+    -_context : AppDbContext
+    +GetWasteEntries() : Task<ActionResult<IEnumerable<WasteEntry>>>
+    +GetWasteEntry(id) : Task<ActionResult<WasteEntry>>
+    +PostWasteEntry(entry) : Task<ActionResult<WasteEntry>>
+    +DeleteWasteEntry(id) : Task<IActionResult>
+  }
+
+  class UploadedFilesController {
+    -_context : AppDbContext
+    +Upload(file) : Task<IActionResult>
+  }
+
+  class UsersController {
+    +Login(credentials) : Task<ActionResult<User>>
+  }
+}
+
+package "Database Context (EF Core)" {
+  class AppDbContext {
+    -DbSet<WasteEntry> WasteEntries
+    -DbSet<User> Users
+    -DbSet<UploadedFile> UploadedFiles
+    -DbSet<Site> Sites
+    -DbSet<WasteType> WasteTypes
+    -DbSet<HandlingMethod> HandlingMethods
+    +OnModelCreating(ModelBuilder)
+  }
+}
+
+package "Domain / Models & DTOs" {
+  class WasteEntry {
+    +EntryId : int
+    +SiteId : int
+    +Site : Site?
+    +WasteTypeId : int
+    +WasteType : WasteType?
+    +HandlingId : int
+    +HandlingMethod : HandlingMethod?
+    +QuantityKg : decimal
+    +Date : DateTime
+  }
+
+  class WasteType {
+    +WasteTypeId : int
+    +Name : string
+    +Category : string
+  }
+
+  class Site {
+    +SiteId : int
+    +Name : string
+    +Location : string
+  }
+
+  class HandlingMethod {
+    +HandlingId : int
+    +Method : string
+    +CostPerTon : decimal
+    +CO2FactorPerTon : decimal
+  }
+
+  class UploadedFile {
+    +Id : int
+    +FileName : string
+    +Content : byte[]
+    +WasteEntryId : int
+    +WasteEntry : WasteEntry?
+  }
+
+  class User {
+    +Id : int
+    +Username : string
+    +Password : string
+    +Role : string
+  }
+
+  class UserDto {
+    +Username : string
+    +Password : string
+  }
+}
+
+' Relationships / dependencies
+Dashboard --> WasteService : uses
+AddWaste --> WasteService : uses/posts entries
+Login --> AuthService : uses
+NavMenu --> AuthService : uses for greeting
+MainLayout --> AuthService : uses for logout
+WasteService ..> WasteEntriesController : "HTTP GET/POST/DELETE"
+WasteService ..> UploadedFilesController : "HTTP POST"
+WasteService ..> UsersController : "HTTP POST login"
+WasteEntriesController --> AppDbContext : uses
+UploadedFilesController --> AppDbContext : uses
+UsersController --> AppDbContext : uses
+AppDbContext --> WasteEntry : manages
+AppDbContext --> UploadedFile : manages
+AppDbContext --> User : manages
+AppDbContext --> Site : manages
+AppDbContext --> WasteType : manages
+AppDbContext --> HandlingMethod : manages
+
+' Navigation properties / domain relationships
+WasteEntry --> WasteType : "WasteType?"
+WasteEntry --> Site : "Site?"
+WasteEntry --> HandlingMethod : "HandlingMethod?"
+UploadedFile --> WasteEntry : "WasteEntry?"
+AuthService --> User : "CurrentUser?"
+
+note right of WasteService
+This class is the front-end HTTP wrapper
+(registered as a Scoped service in Blazor)
+Exposes HttpClient for Dashboard.DeleteEntry()
+Computes business logic (kantspild, reuse %)
+end note
+
+note left of AddWaste
+Importer reads Excel (ClosedXML) and
+creates multiple WasteEntry records
+for kantspild, kvalitetsspild (internal reuse), etc.
+70% of I13 (kvalitetsspild) becomes internal reuse
+end note
+
+note bottom of AppDbContext
+SQLite database context using EF Core
+Seeded with Users, Sites, WasteTypes, HandlingMethods
+Cascading delete: WasteEntry → UploadedFiles
+end note
+
+note right of UploadedFilesController
+Receives file bytes + WasteEntryId
+Stores file content in database
+end note
+
+@enduml

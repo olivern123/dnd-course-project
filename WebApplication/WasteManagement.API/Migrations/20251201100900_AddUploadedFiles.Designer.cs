@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using WasteManagement.API.Data;
 
@@ -10,9 +11,11 @@ using WasteManagement.API.Data;
 namespace WasteManagement.API.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251201100900_AddUploadedFiles")]
+    partial class AddUploadedFiles
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.5");
@@ -250,18 +253,6 @@ namespace WasteManagement.API.Migrations
                             WasteTypeId = 3,
                             Category = "Cardboard/Plastic",
                             Name = "Packaging"
-                        },
-                        new
-                        {
-                            WasteTypeId = 4,
-                            Category = "Edge waste",
-                            Name = "Kantspild"
-                        },
-                        new
-                        {
-                            WasteTypeId = 5,
-                            Category = "Reused internally",
-                            Name = "InternalReuse"
                         });
                 });
 

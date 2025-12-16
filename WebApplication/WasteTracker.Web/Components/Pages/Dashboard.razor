@@ -1,58 +1,259 @@
 @page "/dashboard"
+@rendermode InteractiveServer
+@inject WasteService WasteService
+@inject AuthService Auth
+@inject NavigationManager Nav
 @using WasteTracker.Web.Models
 @using WasteTracker.Web.Services
-@inject WasteService WasteService
 
 <h3>Waste Overview</h3>
 
-@if (entries == null)
+@if (redirecting)
+{
+    <p>Redirecting to login...</p>
+    return;
+}
+
+@if (isLoading)
 {
     <p><em>Loading...</em></p>
 }
-else if (!entries.Any())
-{
-    <p>No waste entries found.</p>
-}
 else
 {
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Site</th>
-                <th>Waste Type</th>
-                <th>Handling Method</th>
-                <th>Quantity (kg)</th>
-                <th>Date</th>
-            </tr>
-        </thead>
-        <tbody>
+    <!-- DATE FILTER -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Filter by Date Range</h5>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <label class="form-label">From</label>
+                            <input type="date" class="form-control" @onchange="(e) => { filterStartDate = ParseDateInput(e); ApplyDateFilter(); }" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">To</label>
+                            <input type="date" class="form-control" @onchange="(e) => { filterEndDate = ParseDateInput(e); ApplyDateFilter(); }" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">&nbsp;</label>
+                            <button class="btn btn-secondary form-control" @onclick="ClearDateFilter">Clear Filter</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- STATISTICS CARDS -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h5 class="card-title">Total Waste</h5>
+                    <p class="card-text display-6">@totalWaste.ToString("0.0") kg</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Kantspild</h5>
+                    <p class="card-text display-6">@kantspild.ToString("0.0") kg</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <h5 class="card-title">Other Waste</h5>
+                    <p class="card-text display-6">@otherWaste.ToString("0.0") kg</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Internal Reuse</h5>
+                    <p class="card-text display-6">@internalReuse.ToString("0.0") kg</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- REUSE STATISTICS -->
+    <div class="alert alert-primary" role="alert">
+        <h5>Waste Disposition</h5>
+        <p><strong>Reused internally:</strong> <span class="badge bg-success">@percentReused.ToString("0.0")%</span></p>
+        <p><strong>Disposed/Incinerated:</strong> <span class="badge bg-danger">@percentDisposed.ToString("0.0")%</span></p>
+    </div>
+
+    <!-- WASTE ENTRIES TABLE -->
+    @if (entries == null || !entries.Any())
+    {
+        <p>No waste entries found.</p>
+    }
+    else
+    {
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Site</th>
+                    <th>Waste Type</th>
+                    <th>Handling Method</th>
+                    <th>Quantity (kg)</th>
+                    <th>Date</th>
+
+                    @if (Auth.IsAdmin)
+                    {
+                        <th>Actions</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
             @foreach (var entry in entries)
             {
                 <tr>
-                    <td>@entry.Site?.Name</td>
-                    <td>@entry.WasteType?.Name</td>
-                    <td>@entry.HandlingMethod?.Method</td>
+                    <td>@(entry.Site?.Name ?? "Unknown")</td>
+                    <td>@(entry.WasteType?.Name ?? "Unknown")</td>
+                    <td>@(entry.HandlingMethod?.Method ?? "Unknown")</td>
                     <td>@entry.QuantityKg</td>
                     <td>@entry.Date.ToShortDateString()</td>
+
+                    @if (Auth.IsAdmin)
+                    {
+                        <td>
+                            <button class="btn btn-danger btn-sm"
+                                    @onclick="async () => await DeleteEntry(entry.EntryId)">
+                                Delete
+                            </button>
+                        </td>
+                    }
                 </tr>
             }
-        </tbody>
-    </table>
+            </tbody>
+        </table>
+    }
 }
 
 @code {
     private List<WasteEntry>? entries;
+    private List<WasteEntry>? allEntries;  // Store unfiltered entries
+    private bool isLoading = true;
+    private bool redirecting = false;
+
+    // Statistics
+    private decimal totalWaste = 0;
+    private decimal kantspild = 0;
+    private decimal otherWaste = 0;
+    private decimal internalReuse = 0;
+    private decimal percentReused = 0;
+    private decimal percentDisposed = 0;
+
+    // Date filtering
+    private DateTime? filterStartDate = null;
+    private DateTime? filterEndDate = null;
 
     protected override async Task OnInitializedAsync()
     {
+        Console.WriteLine($"[Dashboard] OnInitializedAsync - Auth.IsLoggedIn={Auth.IsLoggedIn}, CurrentUser={Auth.CurrentUser?.Username}");
+        
+        if (!Auth.IsLoggedIn)
+        {
+            Console.WriteLine($"[Dashboard] NOT logged in, redirecting to /login");
+            redirecting = true;
+            Nav.NavigateTo("/login", true);
+            return;
+        }
+        
+        Console.WriteLine($"[Dashboard] Logged in as {Auth.CurrentUser?.Username}, loading entries");
         try
         {
-            entries = await WasteService.GetAllAsync();
+            allEntries = await WasteService.GetAllAsync();
+            entries = allEntries;
+            
+            // Load statistics
+            totalWaste = await WasteService.GetTotalWasteKg();
+            kantspild = await WasteService.GetKantspildKg();
+            otherWaste = await WasteService.GetOtherWasteKg();
+            internalReuse = await WasteService.GetInternalReuseKg();
+            
+            var stats = await WasteService.GetReuseStats();
+            percentReused = stats.percentReused;
+            percentDisposed = stats.percentDisposed;
+            
+            Console.WriteLine($"[Dashboard] Loaded {entries.Count} entries - Total: {totalWaste} kg, Kantspild: {kantspild} kg, InternalReuse: {internalReuse} kg");
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"Error loading waste entries: {ex.Message}");
-            entries = new List<WasteEntry>();
+            Console.WriteLine($"[Dashboard] Error loading entries: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ApplyDateFilter()
+    {
+        if (allEntries == null) return;
+
+        entries = allEntries.Where(e =>
+            (!filterStartDate.HasValue || e.Date >= filterStartDate.Value) &&
+            (!filterEndDate.HasValue || e.Date <= filterEndDate.Value.AddDays(1))
+        ).ToList();
+
+        StateHasChanged();
+    }
+
+    private void ClearDateFilter()
+    {
+        filterStartDate = null;
+        filterEndDate = null;
+        entries = allEntries;
+        StateHasChanged();
+    }
+
+    private DateTime? ParseDateInput(ChangeEventArgs e)
+    {
+        if (e.Value == null || string.IsNullOrWhiteSpace(e.Value.ToString()))
+            return null;
+
+        if (DateTime.TryParse(e.Value.ToString(), out var dt))
+            return dt;
+
+        return null;
+    }
+
+    private async Task DeleteEntry(int id)
+    {
+        if (!Auth.IsAdmin)
+            return;
+
+        var http = WasteService.Http;
+
+        var response = await http.DeleteAsync($"wasteentries/{id}");
+
+        if (response.IsSuccessStatusCode)
+        {
+            // Remove from both lists
+            var item = entries?.FirstOrDefault(e => e.EntryId == id);
+            if (item != null)
+            {
+                entries?.Remove(item);
+            }
+            
+            var itemAll = allEntries?.FirstOrDefault(e => e.EntryId == id);
+            if (itemAll != null)
+            {
+                allEntries?.Remove(itemAll);
+            }
+            
+            StateHasChanged();
+            Console.WriteLine($"[Dashboard] Entry {id} deleted successfully.");
+        }
+        else
+        {
+            Console.WriteLine($"Failed to delete entry {id}: {response.StatusCode}");
         }
     }
 }

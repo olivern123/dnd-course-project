@@ -1,0 +1,211 @@
+@page "/competitor"
+@rendermode InteractiveServer
+
+@using WasteTracker.Web.Models
+@using WasteTracker.Web.Services
+@using Microsoft.AspNetCore.Components.Forms
+@using ClosedXML.Excel
+@using System.Globalization
+@inject AuthService Auth
+@inject NavigationManager Nav
+
+<h3>Competitor KPIs</h3>
+
+@if (!Auth.IsLoggedIn)
+{
+    <p>Redirecting to login...</p>
+    Nav.NavigateTo("/login", true);
+    return;
+}
+
+<p>Upload a `CompetitorKPIs.xlsx` file with sheet `CompetitorKPIs` (columns: Company, Year, TotalWasteKg, KantspildKg, KvalitetsspildKg, InternalReuseKg, WasteToIncinerationKg, ReusePercentage, DataSource).</p>
+
+<div class="mb-3">
+    <InputFile OnChange="HandleFile" accept=".xlsx" />
+</div>
+
+@if (error != null)
+{
+    <div class="alert alert-danger">@error</div>
+}
+
+@if (competitors != null && competitors.Any())
+{
+    <h5>Loaded rows: @competitors.Count</h5>
+
+    <div class="mb-3">
+        <label class="form-label">Filter by Year</label>
+        <select class="form-select" @onchange="OnYearChanged">
+            <option value="">All</option>
+            @foreach (var y in years)
+            {
+                <option value="@y">@y</option>
+            }
+        </select>
+    </div>
+
+    <table class="table table-sm table-striped">
+        <thead>
+            <tr>
+                <th>Company</th>
+                <th>Year</th>
+                <th>Total (kg)</th>
+                <th>Kantspild (kg)</th>
+                <th>Kvalitetspild (kg)</th>
+                <th>Internal Reuse (kg)</th>
+                <th>Incineration (kg)</th>
+                <th>Reuse %</th>
+                <th>Data Source</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var c in filtered)
+            {
+                <tr>
+                    <td>@c.Company</td>
+                    <td>@c.Year</td>
+                    <td>@c.TotalWasteKg</td>
+                    <td>@c.KantspildKg</td>
+                    <td>@c.KvalitetsspildKg</td>
+                    <td>@c.InternalReuseKg</td>
+                    <td>@c.WasteToIncinerationKg</td>
+                    <td>
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <div style="width:120px;background:#eee;height:12px;border-radius:6px;overflow:hidden;">
+                                <div style="height:12px;background:linear-gradient(90deg,#2ecc71,#27ae60);width:@Math.Min(100,(double)c.ReusePercentage)%"></div>
+                            </div>
+                            <div>@c.ReusePercentage.ToString("0.0")% </div>
+                        </div>
+                    </td>
+                    <td>@c.DataSource</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <h5>Company summary (latest year per company)</h5>
+    <table class="table table-sm">
+        <thead>
+            <tr><th>Company</th><th>Year</th><th>Total</th><th>Reuse %</th></tr>
+        </thead>
+        <tbody>
+            @foreach (var g in companiesLatest)
+            {
+                <tr>
+                    <td>@g.Company</td>
+                    <td>@g.Year</td>
+                    <td>@g.TotalWasteKg</td>
+                    <td>@g.ReusePercentage.ToString("0.0")%</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<CompetitorKpi> competitors = new();
+    private List<CompetitorKpi> filtered = new();
+    private List<int> years = new();
+    private List<CompetitorKpi> companiesLatest = new();
+    private string? error;
+
+    private async Task HandleFile(InputFileChangeEventArgs e)
+    {
+        error = null;
+        competitors.Clear();
+        filtered.Clear();
+        years.Clear();
+        companiesLatest.Clear();
+
+        var file = e.File;
+        try
+        {
+            using var ms = new MemoryStream();
+            await file.OpenReadStream(50_000_000).CopyToAsync(ms);
+            ms.Position = 0;
+
+            using var wb = new XLWorkbook(ms);
+            var ws = wb.Worksheets.FirstOrDefault(w => w.Name.Trim().Equals("CompetitorKPIs", StringComparison.OrdinalIgnoreCase))
+                     ?? wb.Worksheets.First();
+
+            var header = ws.Row(1);
+            // Map headers to columns
+            var colMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            foreach (var c in header.CellsUsed()) colMap[c.GetString().Trim()] = c.Address.ColumnNumber;
+
+            int lastRow = ws.LastRowUsed().RowNumber();
+            for (int r = 2; r <= lastRow; r++)
+            {
+                var row = ws.Row(r);
+                if (row.IsEmpty()) continue;
+
+                string company = GetStringCell(ws, colMap, "Company", r);
+                if (string.IsNullOrWhiteSpace(company)) continue;
+
+                var k = new CompetitorKpi();
+                k.Company = company;
+                k.Year = GetIntCell(ws, colMap, "Year", r);
+                k.TotalWasteKg = GetDecimalCell(ws, colMap, "TotalWasteKg", r);
+                k.KantspildKg = GetDecimalCell(ws, colMap, "KantspildKg", r);
+                k.KvalitetsspildKg = GetDecimalCell(ws, colMap, "KvalitetsspildKg", r);
+                k.InternalReuseKg = GetDecimalCell(ws, colMap, "InternalReuseKg", r);
+                k.WasteToIncinerationKg = GetDecimalCell(ws, colMap, "WasteToIncinerationKg", r);
+                k.ReusePercentage = GetDecimalCell(ws, colMap, "ReusePercentage", r);
+                k.DataSource = GetStringCell(ws, colMap, "DataSource", r);
+
+                competitors.Add(k);
+            }
+
+            // Build filters and summaries
+            years = competitors.Select(x => x.Year).Distinct().OrderByDescending(x => x).ToList();
+            filtered = competitors.OrderByDescending(x => x.Year).ThenBy(x => x.Company).ToList();
+
+            companiesLatest = competitors
+                .GroupBy(c => c.Company)
+                .Select(g => g.OrderByDescending(x => x.Year).First())
+                .OrderByDescending(x => x.ReusePercentage)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            error = "Failed to parse file: " + ex.Message;
+        }
+    }
+
+    private void OnYearChanged(ChangeEventArgs e)
+    {
+        var val = e.Value?.ToString();
+        if (string.IsNullOrWhiteSpace(val))
+        {
+            filtered = competitors.OrderByDescending(x => x.Year).ThenBy(x => x.Company).ToList();
+        }
+        else if (int.TryParse(val, out var y))
+        {
+            filtered = competitors.Where(x => x.Year == y).OrderByDescending(x => x.TotalWasteKg).ToList();
+        }
+    }
+
+    private string GetStringCell(IXLWorksheet ws, Dictionary<string,int> map, string key, int row)
+    {
+        if (!map.TryGetValue(key, out var col)) return string.Empty;
+        return ws.Cell(row, col).GetString().Trim();
+    }
+
+    private int GetIntCell(IXLWorksheet ws, Dictionary<string,int> map, string key, int row)
+    {
+        var s = GetStringCell(ws, map, key, row);
+        if (int.TryParse(s, out var v)) return v;
+        if (decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out var d)) return (int)d;
+        return 0;
+    }
+
+    private decimal GetDecimalCell(IXLWorksheet ws, Dictionary<string,int> map, string key, int row)
+    {
+        var s = GetStringCell(ws, map, key, row);
+        if (decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out var d)) return d;
+        // Try replacing commas
+        s = s.Replace(',', '.');
+        if (decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out d)) return d;
+        return 0;
+    }
+}

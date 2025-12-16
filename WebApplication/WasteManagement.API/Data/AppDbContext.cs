@@ -12,6 +12,8 @@ public class AppDbContext : DbContext
     public DbSet<HandlingMethod> HandlingMethods => Set<HandlingMethod>();
     public DbSet<WasteEntry> WasteEntries => Set<WasteEntry>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<UploadedFile> UploadedFiles => Set<UploadedFile>();
+
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -20,6 +22,14 @@ public class AppDbContext : DbContext
             modelBuilder.Entity<HandlingMethod>().HasKey(h => h.HandlingId);
             modelBuilder.Entity<WasteEntry>().HasKey(e => e.EntryId);
             modelBuilder.Entity<User>().HasKey(u => u.Id);
+            modelBuilder.Entity<UploadedFile>().HasKey(f => f.Id);
+
+        modelBuilder.Entity<UploadedFile>()
+            .HasOne(f => f.WasteEntry)
+            .WithMany()                          // WasteEntry can have many files
+            .HasForeignKey(f => f.WasteEntryId)
+            .OnDelete(DeleteBehavior.Cascade);
+
 
         // Sites
         modelBuilder.Entity<Site>().HasData(
@@ -31,7 +41,9 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<WasteType>().HasData(
             new WasteType { WasteTypeId = 1, Name = "Yarn leftovers", Category = "Fiber" },
             new WasteType { WasteTypeId = 2, Name = "Fabric scraps", Category = "Fabric" },
-            new WasteType { WasteTypeId = 3, Name = "Packaging", Category = "Cardboard/Plastic" }
+            new WasteType { WasteTypeId = 3, Name = "Packaging", Category = "Cardboard/Plastic" },
+            new WasteType { WasteTypeId = 4, Name = "Kantspild", Category = "Edge waste" },
+            new WasteType { WasteTypeId = 5, Name = "InternalReuse", Category = "Reused internally" }
         );
 
         // Handling methods

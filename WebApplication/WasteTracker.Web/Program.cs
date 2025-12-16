@@ -24,6 +24,7 @@ builder.Services.AddScoped(sp =>
 
 // Register your service
 builder.Services.AddScoped<WasteService>();
+builder.Services.AddScoped<AuthService>();
 
 // ================================================
 // FILE UPLOAD SIZE FIX (IMPORTANT FOR EXCEL FILES)
