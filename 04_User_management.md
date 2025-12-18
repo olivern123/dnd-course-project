@@ -67,3 +67,5 @@ builder.Services.AddScoped(sp =>
     sp.GetRequiredService<IHttpClientFactory>().CreateClient("Default"));
 
 This allows any blazor component to call the api by injecting httpclient.
+
+Describe how the actors functionalities are assigned and handled 
