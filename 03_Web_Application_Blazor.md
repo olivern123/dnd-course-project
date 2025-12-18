@@ -41,3 +41,116 @@ We implemented a simple login screen that sends credentials to the API’s Users
 var response = await Http.PostAsJsonAsync("users/login", loginModel);
 
 By the end of this phase, we developed a fully functional Blazor Server application that communicates seamlessly with the backend Web API. Users can log in, upload Excel files, and view dynamically loaded waste data. This establishes the foundation for adding KPIs, graphs, and advanced reporting in the next development phase.
+
+## Add Waste page
+In order to upload excel files/data we have created the add waste page which is made to upload excel files and extract relevant data and showing it in a preview. This was done using closedXML:
+private decimal TryParseCellValue(IXLCell? cell)
+    {
+        if (cell == null) return 0;
+        try
+        {
+            if (cell.DataType == XLDataType.Number)
+            {
+                try { return Convert.ToDecimal(cell.GetDouble()); } catch { }
+            }
+
+            var s = cell.GetString();
+            if (string.IsNullOrWhiteSpace(s)) return 0;
+
+            // Remove non-breaking spaces and normal spaces used as thousand separators
+            s = s.Replace("\u00A0", "").Replace(" ", "").Trim();
+
+            // Handle parentheses for negatives
+            var isNegative = s.StartsWith("(") && s.EndsWith(")");
+            s = s.Replace("(", "").Replace(")", "");
+
+            // Replace comma with dot for invariant parse, but allow either
+            s = s.Replace(',', '.');
+
+            // Remove any non-digit except dot and minus
+            var filtered = new System.Text.StringBuilder();
+            foreach (var ch in s)
+            {
+                if ((ch >= '0' && ch <= '9') || ch == '.' || ch == '-') filtered.Append(ch);
+            }
+
+            var cleaned = filtered.ToString();
+            if (string.IsNullOrWhiteSpace(cleaned)) return 0;
+
+            if (decimal.TryParse(cleaned, NumberStyles.Number | NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var v))
+            {
+                return isNegative ? -v : v;
+            }
+        }
+        catch { }
+
+        return 0;
+    }
+The method presented here is used to parse data from the Excel files and return them in a consistent numeric format, ensuring that variations in number formatting, such as different decimal separators, thousand separators, and negative value representations, are handled correctly before the data is processed further by the system.
+
+## Competitor page
+When navigating to the competitor page the user once again has the option to upload a file, where the system will try to parse the document and extract relevant data to show as KPIs.
+
+<div class="mb-3">
+    <InputFile OnChange="HandleFile" accept=".xlsx" />
+</div>
+
+@if (error != null)
+{
+    <div class="alert alert-danger">@error</div>
+}
+
+@if (competitors != null && competitors.Any())
+{
+    <h5>Loaded rows: @competitors.Count</h5>
+
+    <div class="mb-3">
+        <label class="form-label">Filter by Year</label>
+        <select class="form-select" @onchange="OnYearChanged">
+            <option value="">All</option>
+            @foreach (var y in years)
+            {
+                <option value="@y">@y</option>
+            }
+        </select>
+    </div>
+
+    <table class="table table-sm table-striped">
+        <thead>
+            <tr>
+                <th>Company</th>
+                <th>Year</th>
+                <th>Total (kg)</th>
+                <th>Kantspild (kg)</th>
+                <th>Kvalitetspild (kg)</th>
+                <th>Internal Reuse (kg)</th>
+                <th>Incineration (kg)</th>
+                <th>Reuse %</th>
+                <th>Data Source</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var c in filtered)
+            {
+                <tr>
+                    <td>@c.Company</td>
+                    <td>@c.Year</td>
+                    <td>@c.TotalWasteKg</td>
+                    <td>@c.KantspildKg</td>
+                    <td>@c.KvalitetsspildKg</td>
+                    <td>@c.InternalReuseKg</td>
+                    <td>@c.WasteToIncinerationKg</td>
+                    <td>
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <div style="width:120px;background:#eee;height:12px;border-radius:6px;overflow:hidden;">
+                                <div style="height:12px;background:linear-gradient(90deg,#2ecc71,#27ae60);width:@Math.Min(100,(double)c.ReusePercentage)%"></div>
+                            </div>
+                            <div>@c.ReusePercentage.ToString("0.0")% </div>
+                        </div>
+                    </td>
+                    <td>@c.DataSource</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    
