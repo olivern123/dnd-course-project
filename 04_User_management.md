@@ -1,5 +1,6 @@
 # Blog Post 4 User Management
 ## User Model
+The system contains two different types of users: Admin and User. The admin has added functionalities compared to the User, the admin has the option to delete records from the dashboard, where as the user only can upload data in the add waste page.
 Users are stored in the SQLite database using Entity framework Core, the model in the api is shown below:
 
 public class User {
