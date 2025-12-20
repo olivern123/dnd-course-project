@@ -1,5 +1,5 @@
 # Contributions of development
-##Oliver Nedergaard (Backend Architecture, API & Integration)
+## Oliver Nedergaard (Backend Architecture, API & Integration)
 
 Oliver had the main responsibility for the overall backend architecture and system integration.
 
