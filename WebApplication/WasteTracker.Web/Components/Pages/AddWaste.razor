@@ -175,17 +175,13 @@
             var s = cell.GetString();
             if (string.IsNullOrWhiteSpace(s)) return 0;
 
-            // Remove non-breaking spaces and normal spaces used as thousand separators
             s = s.Replace("\u00A0", "").Replace(" ", "").Trim();
 
-            // Handle parentheses for negatives
             var isNegative = s.StartsWith("(") && s.EndsWith(")");
             s = s.Replace("(", "").Replace(")", "");
 
-            // Replace comma with dot for invariant parse, but allow either
             s = s.Replace(',', '.');
 
-            // Remove any non-digit except dot and minus
             var filtered = new System.Text.StringBuilder();
             foreach (var ch in s)
             {
